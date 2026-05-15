@@ -5,7 +5,8 @@
     "types": []
   },
   "files": [
-    "src/main.ts"
+    "src/main.ts",
+    "src/app/subscription/subscription-module.ts"
   ],
   "include": [
     "src/**/*.d.ts"

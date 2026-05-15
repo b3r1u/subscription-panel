@@ -1,7 +1,10 @@
 import { NgModule } from '@angular/core';
 import { RouterModule, Routes } from '@angular/router';
+import { Subscription } from './subscription/subscription';
 
-const routes: Routes = [];
+const routes: Routes = [
+   { path: '', component: Subscription }
+];
 
 @NgModule({
   imports: [RouterModule.forChild(routes)],

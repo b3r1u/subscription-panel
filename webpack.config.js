@@ -7,8 +7,8 @@ module.exports = withModuleFederationPlugin({
   name: 'subscription-panel',
 
   exposes: {
-    './Component': './src\app\app.ts',
-  },
+  './SubscriptionModule': './src/app/subscription/subscription.module.ts',
+},
 
   shared: {
     ...shareAll({ singleton: true, strictVersion: true, requiredVersion: 'auto' }),

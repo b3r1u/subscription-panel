@@ -621,7 +621,6 @@ export class Subscription implements OnInit, AfterViewInit, OnDestroy {
 
   constructor(private plansService: SubscriptionPlansService) {}
 
-  // ── Computed ────────────────────────────────────────────────────
   get totalSubscribers(): number {
     return this.plans.reduce((s, p) => s + p._count.subscriptions, 0);
   }
@@ -637,7 +636,6 @@ export class Subscription implements OnInit, AfterViewInit, OnDestroy {
       : 0;
   }
 
-  // ── Lifecycle ───────────────────────────────────────────────────
   ngOnInit(): void {
     this.loadingPlans = true;
     this.plansService.getPlans().subscribe({
@@ -663,7 +661,6 @@ export class Subscription implements OnInit, AfterViewInit, OnDestroy {
     this.barChart?.destroy();
   }
 
-  // ── Charts ──────────────────────────────────────────────────────
   private tryRenderCharts(): void {
     if (!this.viewReady || !this.dataReady) return;
     setTimeout(() => this.renderCharts(), 0);
@@ -791,7 +788,6 @@ export class Subscription implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  // ── Interaction ─────────────────────────────────────────────────
   selectPlan(plan: Plan): void {
     if (this.selectedPlan?.id === plan.id) {
       this.selectedPlan = null;
@@ -816,7 +812,6 @@ export class Subscription implements OnInit, AfterViewInit, OnDestroy {
     return this.selectedPlan?.id === plan.id;
   }
 
-  // ── Helpers ─────────────────────────────────────────────────────
   getPlanBg(index: number): string {
     return this.planBgColors[index % this.planBgColors.length];
   }

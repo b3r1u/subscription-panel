@@ -34,7 +34,10 @@ export interface Subscriber {
 
 @Injectable({ providedIn: 'root' })
 export class SubscriptionPlansService {
-  private api = 'http://localhost:3000/api';
+  private api =
+    window.location.hostname === 'localhost'
+      ? 'http://localhost:3000/api'
+      : 'https://arenaflow-api-production.up.railway.app/api';
 
   constructor(private http: HttpClient) {}
 

@@ -3,28 +3,32 @@ import { HttpClient } from '@angular/common/http';
 import { Observable } from 'rxjs';
 
 export interface Plan {
-  id:                  string;
-  slug:                string;
-  name:                string;
-  description:         string | null;
-  price:               number;
-  max_courts:          number | null;
-  features:            string[];
-  active:              boolean;
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  price: number;
+  max_courts: number | null;
+  features: string[];
+  active: boolean;
   _count: {
     subscriptions: number;
   };
 }
 
 export interface Subscriber {
-  id:            string;
-  status:        'ACTIVE' | 'TRIAL' | 'EXPIRED' | 'CANCELLED' | 'PAST_DUE';
-  created_at:    string;
+  id: string;
+  status: 'ACTIVE' | 'TRIAL' | 'EXPIRED' | 'CANCELLED' | 'PAST_DUE';
+  created_at: string;
+  ends_at: string | null;
   trial_ends_at: string | null;
   user: {
-    name:          string;
-    email:         string;
-    establishment: { name: string } | null;
+    name: string;
+    email: string;
+    establishment: {
+      name: string;
+      _count: { courts: number };
+    } | null;
   };
 }
 
@@ -40,7 +44,7 @@ export class SubscriptionPlansService {
 
   getSubscribers(planId: string): Observable<{ subscriptions: Subscriber[] }> {
     return this.http.get<{ subscriptions: Subscriber[] }>(
-      `${this.api}/platform/plans/${planId}/subscribers`
+      `${this.api}/platform/plans/${planId}/subscribers`,
     );
   }
 }

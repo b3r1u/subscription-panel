@@ -112,8 +112,14 @@ import {
           <span class="text-gray-400 text-sm">Carregando assinantes...</span>
         </div>
 
+        <div *ngIf="subscribersError" class="flex justify-center py-10">
+          <span class="text-red-400 text-sm">Erro ao carregar assinantes.</span>
+        </div>
+
         <div
-          *ngIf="!loadingSubscribers && subscribers.length === 0"
+          *ngIf="
+            !loadingSubscribers && !subscribersError && subscribers.length === 0
+          "
           class="flex justify-center py-10"
         >
           <span class="text-gray-400 text-sm"
@@ -140,17 +146,17 @@ import {
               <th
                 class="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
               >
+                Quadras
+              </th>
+              <th
+                class="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
+              >
                 Status
               </th>
               <th
                 class="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
               >
-                Desde
-              </th>
-              <th
-                class="text-left px-5 py-3 text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide"
-              >
-                Vencimento
+                Adesão
               </th>
             </tr>
           </thead>
@@ -166,21 +172,24 @@ import {
                 <div>{{ sub.user.name }}</div>
                 <div class="text-xs text-gray-400">{{ sub.user.email }}</div>
               </td>
+              <td class="px-5 py-3 text-gray-600 dark:text-gray-300">
+                {{ sub.user.establishment?._count?.courts ?? '—' }}
+              </td>
               <td class="px-5 py-3">
                 <span
                   class="text-xs font-medium px-2 py-0.5 rounded-full"
                   [class]="statusClass(sub.status)"
-                  >{{ statusLabel(sub.status) }}</span
                 >
-              </td>
-              <td class="px-5 py-3 text-gray-500 dark:text-gray-400">
-                {{ sub.created_at | date: 'dd/MM/yyyy' }}
+                  {{ statusLabel(sub.status) }}
+                </span>
               </td>
               <td class="px-5 py-3 text-gray-500 dark:text-gray-400">
                 {{
-                  sub.trial_ends_at
-                    ? (sub.trial_ends_at | date: 'dd/MM/yyyy')
-                    : '—'
+                  sub.ends_at
+                    ? (sub.ends_at | date: 'dd/MM/yyyy')
+                    : sub.trial_ends_at
+                      ? (sub.trial_ends_at | date: 'dd/MM/yyyy')
+                      : (sub.created_at | date: 'dd/MM/yyyy')
                 }}
               </td>
             </tr>
@@ -196,6 +205,7 @@ export class Subscription implements OnInit {
   subscribers: Subscriber[] = [];
   loadingPlans = false;
   loadingSubscribers = false;
+  subscribersError = false;
 
   constructor(private plansService: SubscriptionPlansService) {}
 
@@ -219,6 +229,7 @@ export class Subscription implements OnInit {
     }
     this.selectedPlan = plan;
     this.loadingSubscribers = true;
+    this.subscribersError = false;
     this.plansService.getSubscribers(plan.id).subscribe({
       next: ({ subscriptions }) => {
         this.subscribers = subscriptions;
@@ -226,6 +237,7 @@ export class Subscription implements OnInit {
       },
       error: () => {
         this.loadingSubscribers = false;
+        this.subscribersError = true;
       },
     });
   }

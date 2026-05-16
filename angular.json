@@ -26,6 +26,9 @@
 					"options": {
 						"outputPath": "dist/subscription-panel",
 						"index": "src/index.html",
+						"allowedCommonJsDependencies": [
+							"apexcharts"
+						],
 						"polyfills": [
 							"zone.js"
 						],

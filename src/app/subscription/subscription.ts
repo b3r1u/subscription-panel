@@ -1,4 +1,12 @@
-import { Component, OnInit } from '@angular/core';
+import {
+  Component,
+  OnInit,
+  AfterViewInit,
+  ViewChild,
+  ElementRef,
+  OnDestroy,
+} from '@angular/core';
+import ApexCharts from 'apexcharts';
 import {
   SubscriptionPlansService,
   Plan,
@@ -37,7 +45,6 @@ import {
           class="cursor-pointer rounded-xl border p-5 transition-all duration-200"
           [ngClass]="cardClass(plan)"
         >
-          <!-- Nome e badge de assinantes -->
           <div class="flex items-start justify-between mb-3">
             <h2 class="text-base font-semibold text-gray-900 dark:text-white">
               {{ plan.name }}
@@ -48,22 +55,16 @@ import {
               {{ plan._count.subscriptions }} assinantes
             </span>
           </div>
-
-          <!-- Preço -->
           <p class="text-2xl font-bold text-green-600 dark:text-green-400 mb-1">
             {{ plan.price | currency: 'BRL' : 'symbol' : '1.0-0' }}
             <span class="text-sm font-normal text-gray-400">/mês</span>
           </p>
-
-          <!-- Descrição -->
           <p
             *ngIf="plan.description"
             class="text-xs text-gray-500 dark:text-gray-400 mb-3"
           >
             {{ plan.description }}
           </p>
-
-          <!-- Features -->
           <ul class="space-y-1">
             <li
               *ngFor="let feature of plan.features"
@@ -72,8 +73,6 @@ import {
               <span class="text-green-500">✓</span> {{ feature }}
             </li>
           </ul>
-
-          <!-- Quadras -->
           <p
             *ngIf="plan.max_courts"
             class="mt-3 text-xs text-gray-400 dark:text-gray-500"
@@ -86,6 +85,29 @@ import {
           >
             Quadras ilimitadas
           </p>
+        </div>
+      </div>
+
+      <!-- Gráficos -->
+      <div
+        *ngIf="!loadingPlans && plans.length > 0"
+        class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6"
+      >
+        <div
+          class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5"
+        >
+          <h3 class="font-semibold text-sm text-gray-900 dark:text-white mb-1">
+            Assinantes por Plano
+          </h3>
+          <div #donutEl></div>
+        </div>
+        <div
+          class="rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 p-5"
+        >
+          <h3 class="font-semibold text-sm text-gray-900 dark:text-white mb-1">
+            Receita Potencial Mensal
+          </h3>
+          <div #barEl></div>
         </div>
       </div>
 
@@ -107,15 +129,12 @@ import {
             &times;
           </button>
         </div>
-
         <div *ngIf="loadingSubscribers" class="flex justify-center py-10">
           <span class="text-gray-400 text-sm">Carregando assinantes...</span>
         </div>
-
         <div *ngIf="subscribersError" class="flex justify-center py-10">
           <span class="text-red-400 text-sm">Erro ao carregar assinantes.</span>
         </div>
-
         <div
           *ngIf="
             !loadingSubscribers && !subscribersError && subscribers.length === 0
@@ -126,7 +145,6 @@ import {
             >Nenhum assinante neste plano.</span
           >
         </div>
-
         <table
           *ngIf="!loadingSubscribers && subscribers.length > 0"
           class="w-full text-sm"
@@ -179,9 +197,8 @@ import {
                 <span
                   class="text-xs font-medium px-2 py-0.5 rounded-full"
                   [class]="statusClass(sub.status)"
+                  >{{ statusLabel(sub.status) }}</span
                 >
-                  {{ statusLabel(sub.status) }}
-                </span>
               </td>
               <td class="px-5 py-3 text-gray-500 dark:text-gray-400">
                 {{
@@ -199,13 +216,21 @@ import {
     </div>
   `,
 })
-export class Subscription implements OnInit {
+export class Subscription implements OnInit, AfterViewInit, OnDestroy {
+  @ViewChild('donutEl') donutEl!: ElementRef<HTMLElement>;
+  @ViewChild('barEl') barEl!: ElementRef<HTMLElement>;
+
   plans: Plan[] = [];
   selectedPlan: Plan | null = null;
   subscribers: Subscriber[] = [];
   loadingPlans = false;
   loadingSubscribers = false;
   subscribersError = false;
+
+  private donutChart?: ApexCharts;
+  private barChart?: ApexCharts;
+  private viewReady = false;
+  private dataReady = false;
 
   constructor(private plansService: SubscriptionPlansService) {}
 
@@ -215,11 +240,100 @@ export class Subscription implements OnInit {
       next: ({ plans }) => {
         this.plans = plans;
         this.loadingPlans = false;
+        this.dataReady = true;
+        this.tryRenderCharts();
       },
       error: () => {
         this.loadingPlans = false;
       },
     });
+  }
+
+  ngAfterViewInit(): void {
+    this.viewReady = true;
+    this.tryRenderCharts();
+  }
+
+  ngOnDestroy(): void {
+    this.donutChart?.destroy();
+    this.barChart?.destroy();
+  }
+
+  private tryRenderCharts(): void {
+    if (!this.viewReady || !this.dataReady) return;
+    // Aguarda o *ngIf renderizar os divs no DOM
+    setTimeout(() => this.renderCharts(), 0);
+  }
+
+  private renderCharts(): void {
+    const active = this.plans.filter((p) => p._count.subscriptions > 0);
+    const donutLabels = active.map((p) => p.name);
+    const donutData = active.map((p) => p._count.subscriptions);
+    const barCategories = this.plans.map((p) => p.name);
+    const barData = this.plans.map(
+      (p) => +(p._count.subscriptions * p.price).toFixed(2),
+    );
+
+    if (this.donutEl?.nativeElement && donutData.length > 0) {
+      this.donutChart?.destroy();
+      this.donutChart = new ApexCharts(this.donutEl.nativeElement, {
+        series: donutData,
+        chart: { type: 'donut', height: 240, fontFamily: 'Inter, sans-serif' },
+        labels: donutLabels,
+        colors: ['#22a55c', '#16a34a', '#15803d', '#166534'],
+        legend: {
+          position: 'bottom',
+          labels: { colors: 'hsl(160,10%,55%)' },
+          fontSize: '12px',
+        },
+        dataLabels: { enabled: false },
+        tooltip: {
+          theme: 'dark',
+          y: {
+            formatter: (v: number) => `${v} assinante${v !== 1 ? 's' : ''}`,
+          },
+        },
+        plotOptions: { pie: { donut: { size: '65%' } } },
+      });
+      this.donutChart.render();
+    }
+
+    if (this.barEl?.nativeElement && barData.length > 0) {
+      this.barChart?.destroy();
+      this.barChart = new ApexCharts(this.barEl.nativeElement, {
+        series: [{ name: 'Receita Potencial', data: barData }],
+        chart: {
+          type: 'bar',
+          height: 240,
+          toolbar: { show: false },
+          fontFamily: 'Inter, sans-serif',
+        },
+        colors: ['#22a55c'],
+        dataLabels: { enabled: false },
+        plotOptions: { bar: { borderRadius: 6, columnWidth: '50%' } },
+        xaxis: {
+          categories: barCategories,
+          axisBorder: { show: false },
+          axisTicks: { show: false },
+          labels: { style: { colors: 'hsl(160,10%,55%)', fontSize: '11px' } },
+        },
+        yaxis: {
+          labels: {
+            formatter: (v: number) => (v === 0 ? '0' : `R$${Math.round(v)}`),
+            style: { colors: 'hsl(160,10%,55%)', fontSize: '11px' },
+          },
+        },
+        grid: { borderColor: 'hsl(150,12%,90%)', strokeDashArray: 4 },
+        tooltip: {
+          theme: 'dark',
+          y: {
+            formatter: (v: number) =>
+              `R$ ${v.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}`,
+          },
+        },
+      });
+      this.barChart.render();
+    }
   }
 
   selectPlan(plan: Plan): void {
